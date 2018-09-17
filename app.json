@@ -22,6 +22,14 @@
     ],
     "ios": {
       "supportsTablet": true
+    },
+    "android": {
+      "package": "lc.fn.opendropbike",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBi9fahOUkRJ28UJOnDZ8mUFnj50YQ13g0"
+        }
+      }
     }
   }
 }
