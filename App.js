@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, Text, View, Button } from 'react-native'
+import { StyleSheet, Text, View, Button, Alert } from 'react-native'
 import { Permissions, MapView, BarCodeScanner, Camera } from 'expo'
 import Color from 'color'
 
@@ -84,7 +84,12 @@ export default class App extends React.PureComponent {
   async handleBarCodeScanned ({data}) {
     console.log('qr code', data)
     const plate = data.split('=')[1]
-    this.setState({scan: false, loading: true})
+    this.setState({scan: false})
+    return this.startTrip(plate)
+  }
+
+  async startTrip (plate) {
+    this.setState({loading: true})
     await startTrip(plate).catch((error) => {
       this.setState({error})
     })
@@ -125,6 +130,16 @@ export default class App extends React.PureComponent {
           pinColor={bike.state === 'idle' ? 'orange' : 'red'}
           description={bike.state}
           coordinate={{latitude: bike.lat, longitude: bike.lng}}
+          onCalloutPress={() => {
+            Alert.alert(
+              'Unlock Bike',
+              'This will immediately unlock the bike. You should probably be close. Plate: ' + bike.plate,
+              [
+                {text: 'Cancel', style: 'cancel'},
+                {text: 'Unlock', onPress: () => this.startTrip(bike.plate)}
+              ]
+            )
+          }}
         />
       })}
 
