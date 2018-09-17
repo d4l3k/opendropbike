@@ -44,6 +44,12 @@ export const getNearbyBikes = async () => {
   return get('/v3/bikes?' + urlEncode({lat: loc.coords.latitude, lng: loc.coords.longitude}))
 }
 
+export const getNearbyRegion = async () => {
+  const loc = await getLocation()
+
+  return get('/v3/region_near?' + urlEncode({lat: loc.coords.latitude, lng: loc.coords.longitude}))
+}
+
 export const authenticate = async (phone) => {
   return post('/v3/authenticate', {phone})
 }

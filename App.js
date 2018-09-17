@@ -1,8 +1,9 @@
 import React from 'react'
 import { StyleSheet, Text, View, Button } from 'react-native'
 import { MapView } from 'expo'
+import Color from 'color'
 
-import {getNearbyBikes, AuthScreen} from './api'
+import {getNearbyBikes, AuthScreen, getNearbyRegion} from './api'
 import {getLocation} from './location'
 import {Loading} from './loading'
 
@@ -20,7 +21,8 @@ export default class App extends React.PureComponent {
   async getLocation () {
     const loc = await getLocation()
     const bikes = await getNearbyBikes()
-    this.setState({loc, bikes, loading: false})
+    const region = await getNearbyRegion()
+    this.setState({loc, bikes, region, loading: false})
   }
 
   render () {
@@ -72,7 +74,33 @@ export default class App extends React.PureComponent {
           coordinate={{latitude: bike.lat, longitude: bike.lng}}
         />
       })}
+
+      {this.state.region.shapes.concat(this.state.region.exclusion_zones).map((zone) => {
+        const color = Color('#' + (zone.colour || '7EC0EE'))
+
+        return <MapView.Polygon
+          key={zone.id}
+          strokeColor={color.string()}
+          fillColor={color.fade(0.9).string()}
+          coordinates={this.parseShape(zone.shape)}
+        />
+      })}
     </MapView>
+  }
+
+  // parseShape parses shape strings in the format '((lat, lng),(lat, lng))`
+  parseShape (shape) {
+    const coords = []
+    const parts = shape.split(/[^0-9.-]+/g)
+    console.log(parts)
+    while (parts.length > 0) {
+      if (!parts[0]) {
+        parts.shift()
+        continue
+      }
+      coords.push({longitude: parseFloat(parts.shift()), latitude: parseFloat(parts.shift())})
+    }
+    return coords
   }
 }
 
