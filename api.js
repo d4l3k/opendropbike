@@ -99,6 +99,10 @@ export const startTrip = async (plate) => {
   })
 }
 
+export const getCurrentTrips = async () => {
+  return authGet('/v3/current_trips')
+}
+
 export class AuthScreen extends React.PureComponent {
   constructor (props) {
     super(props)

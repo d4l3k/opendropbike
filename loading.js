@@ -8,6 +8,10 @@ export const Loading = (props) => {
   </View>
 }
 
+export const SmallLoading = (props) => {
+  return <ActivityIndicator color={'#7EC0EE'} size="large" />
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

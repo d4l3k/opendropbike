@@ -3,9 +3,9 @@ import { StyleSheet, Text, View, Button, Alert } from 'react-native'
 import { Permissions, MapView, BarCodeScanner, Camera } from 'expo'
 import Color from 'color'
 
-import {getNearbyBikes, AuthScreen, getNearbyRegion, startTrip} from './api'
+import {getNearbyBikes, AuthScreen, getNearbyRegion, startTrip, getCurrentTrips} from './api'
 import {getLocation} from './location'
-import {Loading} from './loading'
+import {SmallLoading, Loading} from './loading'
 import {Error} from './error'
 
 export default class App extends React.PureComponent {
@@ -21,13 +21,14 @@ export default class App extends React.PureComponent {
     }
   }
 
-  async getLocation () {
-    const [loc, bikes, region] = await Promise.all([
+  async loadData () {
+    const [loc, bikes, region, trips] = await Promise.all([
       getLocation(),
       getNearbyBikes(),
-      getNearbyRegion()
+      getNearbyRegion(),
+      getCurrentTrips(),
     ])
-    this.setState({ loc, bikes, region, loading: false })
+    this.setState({ loc, bikes, region, trips, loading: false, smallLoading: false })
   }
 
   render () {
@@ -41,7 +42,7 @@ export default class App extends React.PureComponent {
     if (!this.state.authed) {
       return <AuthScreen onAuth={({session, user}) => {
         this.setState({authed: true})
-        this.getLocation()
+        this.loadData()
       }} />
     }
     if (this.state.loading) {
@@ -55,9 +56,20 @@ export default class App extends React.PureComponent {
     return (
       <View style={styles.container}>
         {this.renderMap()}
-        <Button title='Unlock Bike' onPress={this.openScanner.bind(this)}/>
+        <View style={styles.row}>
+          <Button title='Unlock Bike' onPress={this.openScanner.bind(this)} />
+          <View style={styles.row}>
+            {this.state.smallLoading ? <SmallLoading /> : null}
+            <Button title='Refresh' onPress={this.refresh.bind(this)} />
+          </View>
+        </View>
       </View>
     )
+  }
+
+  refresh () {
+    this.setState({smallLoading: true})
+    this.loadData()
   }
 
   renderScan () {
@@ -93,6 +105,7 @@ export default class App extends React.PureComponent {
     await startTrip(plate).catch((error) => {
       this.setState({error})
     })
+    await this.loadData()
     this.setState({loading: false})
   }
 
@@ -175,8 +188,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'flex-end',
     padding: 16
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly'
   }
 })
