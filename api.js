@@ -8,6 +8,7 @@ import {Loading} from './loading'
 const baseURL = 'https://dropbike.herokuapp.com'
 
 const apiCall = async (method, endpoint, body, headers) => {
+  console.log('->', method, endpoint, body, headers)
   const resp = await fetch(baseURL + endpoint, {
     method: method,
     body: JSON.stringify(body),
@@ -20,17 +21,19 @@ const apiCall = async (method, endpoint, body, headers) => {
     }
   })
   const json = await resp.json()
-  console.log('->', method, endpoint, body, headers)
-  console.log('<-', json)
+  console.log('<-', method, endpoint, json)
+  if (json.status_code && json.message) {
+    throw new Error(json.status_code + ': ' + json.message)
+  }
   return json
 }
 
 const get = async (endpoint, body, headers) => {
-  return await apiCall('GET', endpoint, body, headers)
+  return apiCall('GET', endpoint, body, headers)
 }
 
 const post = async (endpoint, body, headers) => {
-  return await apiCall('POST', endpoint, body, headers)
+  return apiCall('POST', endpoint, body, headers)
 }
 
 function urlEncode (args) {
@@ -68,7 +71,7 @@ const getSession = async () => {
 
 const authGet = async (endpoint, body, headers) => {
   const session = await getSession()
-  return await apiCall('GET', endpoint, body, {
+  return apiCall('GET', endpoint, body, {
     "x-dropbike-session-id": session.id,
     ...headers
   })
@@ -76,14 +79,24 @@ const authGet = async (endpoint, body, headers) => {
 
 const authPost = async (endpoint, body, headers) => {
   const session = await getSession()
-  return await apiCall('POST', endpoint, body, {
+  return apiCall('POST', endpoint, body, {
     "x-dropbike-session-id": session.id,
     ...headers
   })
 }
 
-const getUser = async () => {
+export const getUser = async () => {
   return authGet('/v3/user')
+}
+
+export const startTrip = async (plate) => {
+  const loc = await getLocation()
+  return authPost('/v3/start_trip', {
+    lat: loc.coords.latitude,
+    lng: loc.coords.longitude,
+    plate,
+    scan_type: 'qr'
+  })
 }
 
 export class AuthScreen extends React.PureComponent {

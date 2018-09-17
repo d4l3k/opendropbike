@@ -1,11 +1,12 @@
 import React from 'react'
 import { StyleSheet, Text, View, Button } from 'react-native'
-import { MapView } from 'expo'
+import { Permissions, MapView, BarCodeScanner, Camera } from 'expo'
 import Color from 'color'
 
-import {getNearbyBikes, AuthScreen, getNearbyRegion} from './api'
+import {getNearbyBikes, AuthScreen, getNearbyRegion, startTrip} from './api'
 import {getLocation} from './location'
 import {Loading} from './loading'
+import {Error} from './error'
 
 export default class App extends React.PureComponent {
   constructor (props) {
@@ -15,20 +16,30 @@ export default class App extends React.PureComponent {
       bikes: [],
       loading: true,
       authed: false,
+      scan: false,
+      torch: false
     }
   }
 
   async getLocation () {
-    const loc = await getLocation()
-    const bikes = await getNearbyBikes()
-    const region = await getNearbyRegion()
-    this.setState({loc, bikes, region, loading: false})
+    const [loc, bikes, region] = await Promise.all([
+      getLocation(),
+      getNearbyBikes(),
+      getNearbyRegion()
+    ])
+    this.setState({ loc, bikes, region, loading: false })
   }
 
   render () {
+    if (this.state.error) {
+      return <Error
+        onClose={() => this.setState({error: undefined})}
+        error={this.state.error}
+      />
+    }
+
     if (!this.state.authed) {
       return <AuthScreen onAuth={({session, user}) => {
-        console.log(session, user)
         this.setState({authed: true})
         this.getLocation()
       }} />
@@ -37,15 +48,56 @@ export default class App extends React.PureComponent {
       return <Loading />
     }
 
+    if (this.state.scan) {
+      return this.renderScan()
+    }
+
     return (
       <View style={styles.container}>
         {this.renderMap()}
-        <Button title='Unlock Bike' onPress={this.unlockBike.bind(this)}/>
+        <Button title='Unlock Bike' onPress={this.openScanner.bind(this)}/>
       </View>
     )
   }
 
-  unlockBike () {
+  renderScan () {
+    const {FlashMode} = Camera.Constants
+
+    return <View style={styles.container}>
+      <Camera
+        onBarCodeScanned={this.handleBarCodeScanned.bind(this)}
+        barCodeScannerSettings={{
+          barCodeTypes: [BarCodeScanner.Constants.BarCodeType.qr]
+        }}
+        style={StyleSheet.absoluteFill}
+        flashMode={this.state.torch ? FlashMode.torch : FlashMode.off}
+      />
+      <Button title='Flashlight' onPress={() => {
+        this.setState({torch: !this.state.torch})
+      }} />
+      <Button title='Cancel' onPress={() => {
+        this.setState({scan: false})
+      }} />
+    </View>
+  }
+
+  async handleBarCodeScanned ({data}) {
+    console.log('qr code', data)
+    const plate = data.split('=')[1]
+    this.setState({scan: false, loading: true})
+    await startTrip(plate).catch((error) => {
+      this.setState({error})
+    })
+    this.setState({loading: false})
+  }
+
+  async openScanner () {
+    const { status } = await Permissions.askAsync(Permissions.CAMERA)
+    if (status === 'granted') {
+      this.setState({scan: true})
+    } else {
+      throw new Error('Camera permission not granted')
+    }
   }
 
   renderMap () {
@@ -55,7 +107,7 @@ export default class App extends React.PureComponent {
     }
 
     return <MapView
-      style={{ flex: 1, alignSelf: 'stretch' }}
+      style={StyleSheet.absoluteFill}
       showsUserLocation={true}
       showsMyLocationButton={true}
       showsCompass={true}
@@ -70,6 +122,7 @@ export default class App extends React.PureComponent {
         return <MapView.Marker
           key={bike.plate}
           title={bike.plate}
+          pinColor={bike.state === 'idle' ? 'orange' : 'red'}
           description={bike.state}
           coordinate={{latitude: bike.lat, longitude: bike.lng}}
         />
@@ -92,7 +145,6 @@ export default class App extends React.PureComponent {
   parseShape (shape) {
     const coords = []
     const parts = shape.split(/[^0-9.-]+/g)
-    console.log(parts)
     while (parts.length > 0) {
       if (!parts[0]) {
         parts.shift()
@@ -109,6 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+    justifyContent: 'flex-end',
+    padding: 16
+  }
+})
