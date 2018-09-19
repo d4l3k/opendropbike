@@ -8,6 +8,59 @@ import {getLocation} from './location'
 import {SmallLoading, Loading} from './loading'
 import {Error} from './error'
 
+// https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
+if (!String.prototype.padStart) {
+  String.prototype.padStart = function padStart(targetLength, padString) {
+    targetLength = targetLength >> 0; //truncate if number, or convert non-number to 0;
+    padString = String(typeof padString !== 'undefined' ? padString : ' ');
+    if (this.length >= targetLength) {
+      return String(this);
+    } else {
+      targetLength = targetLength - this.length;
+      if (targetLength > padString.length) {
+        padString += padString.repeat(targetLength / padString.length); //append to original to ensure we are longer than needed
+      }
+      return padString.slice(0, targetLength) + String(this);
+    }
+  };
+}
+
+class Trip extends React.PureComponent {
+  constructor (props) {
+    super(props)
+
+    this.state = {}
+  }
+
+  componentDidMount () {
+    this.interval = setInterval(() => this.setState({ time: Date.now() }), 1000)
+  }
+
+  componentWillUnmount () {
+    clearInterval(this.interval)
+  }
+
+  render () {
+    const {trip} = this.props
+    return <View style={styles.trip}>
+      <Text>Plate: {trip.bike_plate}</Text>
+      <Text>{this.time()}</Text>
+    </View>
+  }
+
+  time () {
+    const {time} = this.state
+    const started = Date.parse(this.props.trip.start_time)
+    const dur = (time - started) / 1000
+    console.log(time, started, dur)
+    const minutes = Math.floor(dur/60)
+    const seconds = Math.floor(dur % 60)
+    return minutes.toString() + ':' + seconds.toString().padStart(2, '0')
+  }
+}
+
+
 export default class App extends React.PureComponent {
   constructor (props) {
     super(props)
@@ -26,8 +79,10 @@ export default class App extends React.PureComponent {
       getLocation(),
       getNearbyBikes(),
       getNearbyRegion(),
-      getCurrentTrips(),
-    ])
+      getCurrentTrips()
+    ]).catch((error) => {
+      this.setState({error})
+    })
     this.setState({ loc, bikes, region, trips, loading: false, smallLoading: false })
   }
 
@@ -63,8 +118,15 @@ export default class App extends React.PureComponent {
             <Button title='Refresh' onPress={this.refresh.bind(this)} />
           </View>
         </View>
+        {this.renderTrips()}
       </View>
     )
+  }
+
+  renderTrips () {
+    return this.state.trips.map(trip => {
+      return <Trip key={trip.id} trip={trip} />
+    })
   }
 
   refresh () {
@@ -195,5 +257,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-evenly'
+  },
+  trip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    padding: 16,
+    margin: 16
   }
 })
