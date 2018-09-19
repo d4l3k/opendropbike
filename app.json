@@ -1,11 +1,14 @@
 {
   "expo": {
     "name": "opendropbike",
-    "description": "This project is really great.",
+    "description": "A reimplementation of the dropbike app. Fairly bare bones but does enough and is much faster.",
     "slug": "opendropbike",
     "privacy": "public",
     "sdkVersion": "30.0.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,6 +33,7 @@
           "apiKey": "AIzaSyBi9fahOUkRJ28UJOnDZ8mUFnj50YQ13g0"
         }
       }
-    }
+    },
+    "githubUrl": "https://github.com/d4l3k/opendropbike"
   }
 }
