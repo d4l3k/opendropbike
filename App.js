@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Button, Alert } from 'react-native'
 import { Permissions, MapView, BarCodeScanner, Camera } from 'expo'
 import Color from 'color'
 
-import {getNearbyBikes, AuthScreen, getNearbyRegion, startTrip, getCurrentTrips} from './api'
+import {getNearbyBikes, AuthScreen, getNearbyRegion, startTrip, getCurrentTrips, devEndTrip} from './api'
 import {getLocation} from './location'
 import {SmallLoading, Loading} from './loading'
 import {Error} from './error'
@@ -34,7 +34,12 @@ class Trip extends React.PureComponent {
   }
 
   componentDidMount () {
-    this.interval = setInterval(() => this.setState({ time: Date.now() }), 1000)
+    this.interval = setInterval(() => this.updateTime(), 1000)
+    this.updateTime()
+  }
+
+  updateTime () {
+    this.setState({ time: Date.now() })
   }
 
   componentWillUnmount () {
@@ -46,14 +51,18 @@ class Trip extends React.PureComponent {
     return <View style={styles.trip}>
       <Text>Plate: {trip.bike_plate}</Text>
       <Text>{this.time()}</Text>
+      <Button title='End' onPress={this.endTrip.bind(this)} />
     </View>
+  }
+
+  async endTrip () {
+    return devEndTrip(this.props.trip.id, this.props.trip.bike_plate)
   }
 
   time () {
     const {time} = this.state
     const started = Date.parse(this.props.trip.start_time)
     const dur = (time - started) / 1000
-    console.log(time, started, dur)
     const minutes = Math.floor(dur/60)
     const seconds = Math.floor(dur % 60)
     return minutes.toString() + ':' + seconds.toString().padStart(2, '0')
@@ -256,11 +265,13 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly'
+    justifyContent: 'space-evenly',
+    alignItems: 'center'
   },
   trip: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: 'white',
     padding: 16,
     margin: 16

@@ -20,9 +20,15 @@ const apiCall = async (method, endpoint, body, headers) => {
       ...headers
     }
   })
-  const json = await resp.json()
+  const text = await resp.text()
+  let json
+  try {
+    json = JSON.parse(text)
+  } catch (e) {
+    console.warn('invalid JSON response: ' + JSON.stringify(text))
+  }
   console.log('<-', method, endpoint, json)
-  if (json.status_code && json.message) {
+  if (json && json.status_code && json.message) {
     throw new Error(json.status_code + ': ' + json.message)
   }
   return json
@@ -59,6 +65,20 @@ export const authenticate = async (phone) => {
 
 export const verify = async (sms_id, code) => {
   return post('/v3/verify', {sms_id, uuid: Constants.installationId, code})
+}
+
+export const devEndTrip = async (trip_id, plate) => {
+  const loc = await getLocation()
+  await post('/v3/end_trip', {
+    lat: loc.coords.latitude,
+    lng: loc.coords.longitude,
+    plate
+  })
+  return post('/v3/finalize_trip', {
+    lat: loc.coords.latitude,
+    lng: loc.coords.longitude,
+    trip_id
+  })
 }
 
 const getSession = async () => {
